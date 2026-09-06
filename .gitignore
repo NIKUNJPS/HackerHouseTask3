@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Secrets
+.env
+
+# Downloaded models (fetched + integrity-checked on first run)
+models/
+*.onnx
+*.part
+
+# Runtime output (records, deployments, compiled artifacts, annotated images)
+data/
+
+# Demo data downloaded by scripts/make_sample_dataset.py
+samples/
+dataset/*.jpg
+dataset/*.jpeg
+dataset/*.png
+dataset/*.webp
+dataset/sources.json
+
+# OS
+.DS_Store
+Thumbs.db

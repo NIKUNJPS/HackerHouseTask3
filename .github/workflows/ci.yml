@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install (blockchain + fingerprint deps only)
+        run: |
+          python -m pip install --upgrade pip
+          # The offline smoke tests don't need OpenCV; install just what they use.
+          pip install "web3>=6,<7" "py-solc-x>=2.0.2" "eth-tester>=0.11.0b1" "py-evm>=0.10.0b1" python-dotenv pytest
+
+      - name: Run smoke tests
+        run: pytest -q
