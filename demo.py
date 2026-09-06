@@ -56,22 +56,35 @@ def main() -> int:
     except Exception:
         pass
 
-    have_data = (ROOT / SCAN).exists() and (ROOT / "dataset" / "sources.json").exists()
-    if not have_data:
-        if run(["make-sample"], "STEP 0  —  prepare demo dataset (public faces + real URLs)"):
-            return 1
-    run(["build-index"], "STEP 1  —  build the offline face index")
+    # Live web search (SerpApi) when a key is configured; otherwise the offline
+    # face-embedding index. Both are genuine searches.
+    import os
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ROOT / ".env")
+    except Exception:
+        pass
+    use_live = bool(os.environ.get("SERPAPI_KEY", "").strip())
+    provider = "serpapi" if use_live else "local"
 
-    banner("STEP 2  —  FACE SCAN  ->  SOCIAL SEARCH  ->  BLOCKCHAIN  (real match)")
-    print("   $ python cli.py run --image %s --provider local --chain memory\n" % SCAN,
-          flush=True)
+    # Always need the sample scan input; the offline index is only needed for local.
+    if not (ROOT / SCAN).exists() or (not use_live and not (ROOT / "dataset" / "sources.json").exists()):
+        if run(["make-sample"], "STEP 0  —  prepare a sample face scan input"):
+            return 1
+    if not use_live:
+        run(["build-index"], "STEP 1  —  build the offline face index")
+
+    src = "LIVE WEB (SerpApi Google Lens)" if use_live else "OFFLINE face-embedding index"
+    banner("STEP 2  —  FACE SCAN -> SOCIAL SEARCH -> BLOCKCHAIN   [search: %s]" % src)
+    print("   $ python cli.py run --image %s --provider %s --chain memory\n"
+          % (SCAN, provider), flush=True)
     if PAUSE:
         try:
             input("   [press Enter to run the full pipeline] ")
         except EOFError:
             pass
     subprocess.run([PY, "cli.py", "run", "--image", SCAN,
-                    "--provider", "local", "--chain", "memory"], cwd=ROOT)
+                    "--provider", provider, "--chain", "memory"], cwd=ROOT)
 
     rec = newest_record()
     banner("STEP 3  —  TAMPER TEST  (editing the record must break verification)")
