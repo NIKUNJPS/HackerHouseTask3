@@ -219,9 +219,19 @@ CI runs them on every push (`.github/workflows/ci.yml`).
 
 ---
 
+## One‑command demo (for the screen recording)
+
+After `pip install -r requirements.txt`, the entire narrative runs in a single
+clean take (no filenames to copy on camera):
+
+```bash
+python demo.py            # runs: dataset -> index -> full pipeline -> tamper test
+python demo.py --pause    # waits for Enter between steps, for narration
+```
+
 ## Screen‑recording checklist
 
-Record a plain screen capture showing, end to end:
+Prefer `python demo.py`. If recording the steps manually, show, end to end:
 
 1. `python cli.py make-sample` and `python cli.py build-index`
 2. `python cli.py run --image samples/scan_person_a.jpg --provider local --chain memory`
