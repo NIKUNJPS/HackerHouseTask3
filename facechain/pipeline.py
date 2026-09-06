@@ -225,23 +225,38 @@ def _print_verification(checks: dict) -> None:
     def mark(b):
         return log.green("PASS") if b else log.red("FAIL")
 
-    log.kv("off-chain integrity", mark(checks["offchain_integrity"]))
+    off = checks["offchain_integrity"]
+    reachable = checks.get("chain_reachable")
+    network = checks.get("network")
+
+    log.kv("off-chain integrity", mark(off))
     log.kv("  recomputed", checks["recomputed_fingerprint"])
     log.kv("  stored", checks["stored_fingerprint"])
-    if checks.get("chain_reachable"):
+    if not off:
+        log.fail("TAMPERING DETECTED — recomputed fingerprint differs from the record")
+
+    if reachable:
         log.kv("on-chain fingerprint exists", mark(checks.get("onchain_exists")))
         log.kv("on-chain uri matches", mark(checks.get("uri_matches")))
-        log.kv("  on-chain uri", checks.get("onchain_uri"))
-        log.kv("  on-chain timestamp", checks.get("onchain_timestamp"))
+        if checks.get("onchain_exists"):
+            log.kv("  on-chain uri", checks.get("onchain_uri"))
+            log.kv("  on-chain timestamp", checks.get("onchain_timestamp"))
+    elif network == "memory":
+        log.info(log.dim("on-chain re-read skipped — the in-process 'memory' chain is "
+                         "ephemeral; the off-chain fingerprint check above is authoritative."))
     else:
         log.warn(f"chain not reachable for re-read: {checks.get('chain_error')}")
-        if checks.get("network") == "memory":
-            log.warn("the 'memory' chain is in-process/ephemeral — cross-process "
-                     "re-verification needs --chain rpc or sepolia")
+
     print()
-    if checks["verified"]:
+    if not off:
+        log.banner("❌  VERIFICATION FAILED — TAMPERING DETECTED",
+                   "record contents no longer match the anchored fingerprint")
+    elif reachable and checks.get("verified"):
         log.banner("✅  VERIFIED ON-CHAIN",
                    "record integrity confirmed against the tamper-evident ledger")
+    elif not reachable and network == "memory":
+        log.banner("✅  OFF-CHAIN INTEGRITY OK",
+                   "fingerprint intact; on-chain re-read needs --chain rpc or sepolia")
     else:
         log.banner("❌  VERIFICATION FAILED",
                    "record does not match the on-chain anchor")
