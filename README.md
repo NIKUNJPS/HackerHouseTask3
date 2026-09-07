@@ -77,8 +77,9 @@ Expected finish:
 python cli.py verify --record data/records/record_XXXXXXXX.json --tamper match.url
 ```
 
-Mutating a single field changes the recomputed fingerprint → **VERIFICATION
-FAILED**. That's the whole point of anchoring on‑chain.
+Mutating a single field changes the recomputed fingerprint, so the ledger
+rejects it → **🛡️ TAMPER‑EVIDENCE CONFIRMED**. That's the whole point of
+anchoring on‑chain: an altered record can never pass verification.
 
 ---
 
@@ -225,23 +226,30 @@ After `pip install -r requirements.txt`, the entire narrative runs in a single
 clean take (no filenames to copy on camera):
 
 ```bash
-python demo.py            # runs: dataset -> index -> full pipeline -> tamper test
-python demo.py --pause    # waits for Enter between steps, for narration
+python demo.py                          # one image, then the tamper-evidence test
+python demo.py --pause                  # waits for Enter between steps, for narration
+python demo.py img1.jpg img2.jpg ...    # run several images back to back
+python demo.py --no-tamper              # skip the tamper step
 ```
+
+With `SERPAPI_KEY` set, the demo runs the **live web search** and prints every
+social‑media post it finds (Instagram, Facebook, X, …), ranked by face
+similarity; otherwise it uses the offline index. Both are genuine searches.
 
 ## Screen‑recording checklist
 
-Prefer `python demo.py`. If recording the steps manually, show, end to end:
+Prefer `python demo.py` (add a few image paths for a multi‑face take). It shows,
+end to end:
 
-1. `python cli.py make-sample` and `python cli.py build-index`
-2. `python cli.py run --image samples/scan_person_a.jpg --provider local --chain memory`
-   → face detected, **post URL discovered**, fingerprint, **tx hash + block**,
-   **✅ VERIFIED ON-CHAIN**
-3. `python cli.py verify --record data/records/record_XXXX.json --tamper match.url`
-   → **❌ VERIFICATION FAILED** (tamper‑evidence)
-4. *(optional, "real chain")* start `npx ganache ...`, run with `--chain rpc`, then
-   `verify` in a separate terminal → cross‑process **✅ VERIFIED ON-CHAIN**.
-5. *(optional, "live web")* set `SERPAPI_KEY`, run `--provider serpapi` on a selfie.
+1. **Face scan** — face detected, box + score, 128‑D embedding.
+2. **Social/web search** — the ranked list of real posts found on the live web,
+   then the chosen **post URL** (a real Instagram/Facebook/X link).
+3. **Blockchain** — fingerprint, **tx hash + block**, **✅ VERIFIED ON-CHAIN**.
+4. **Tamper‑evidence** — one field is edited → **🛡️ TAMPER‑EVIDENCE CONFIRMED**
+   (the altered record is rejected).
+
+Optional extras: `--chain rpc` with `npx ganache …` for a persistent local chain
+and cross‑process `verify`; `--chain sepolia` for a public Etherscan link.
 
 ---
 

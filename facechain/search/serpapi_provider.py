@@ -99,7 +99,7 @@ class SerpApiProvider(SearchProvider):
 
         from .base import cosine_or_zero  # local import to avoid cycle at top
 
-        best: Optional[SocialPost] = None
+        candidates: list[SocialPost] = []
         for m in social[:12]:
             link = m.get("link", "")
             thumb = m.get("thumbnail", "") or m.get("image", "")
@@ -109,7 +109,7 @@ class SerpApiProvider(SearchProvider):
             if emb is not None and query_embedding is not None:
                 score = cosine_or_zero(query_embedding, emb)
                 verified = score >= config.SEARCH_MATCH_THRESHOLD
-            post = SocialPost(
+            candidates.append(SocialPost(
                 url=link,
                 platform=platform_of(link),
                 title=m.get("title", "") or m.get("source", ""),
@@ -119,8 +119,25 @@ class SerpApiProvider(SearchProvider):
                 face_verified=verified,
                 provider=self.name,
                 raw=m,
-            )
-            if best is None or post.match_score > best.match_score:
-                best = post
+            ))
 
+        # Rank every discovered social post by face similarity and show them all,
+        # so the demo surfaces each platform the live web actually returned
+        # (Instagram, Facebook, X, Pinterest, …) — none of it hard-coded.
+        candidates.sort(key=lambda p: p.match_score, reverse=True)
+        if candidates:
+            log.info("social-media posts found on the live web (ranked by face match):")
+            for p in candidates[:8]:
+                tick = "verified" if p.face_verified else "  —     "
+                log.kv(f"  [{tick}] {p.platform:<10} cos={p.match_score:.3f}", p.url[:66])
+
+        # Record every match on the fingerprint record for auditability.
+        best = candidates[0] if candidates else None
+        if best is not None:
+            best.raw = dict(best.raw or {})
+            best.raw["all_social_matches"] = [
+                {"platform": p.platform, "url": p.url,
+                 "match_score": p.match_score, "face_verified": p.face_verified}
+                for p in candidates[:8]
+            ]
         return best

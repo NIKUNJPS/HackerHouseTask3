@@ -43,7 +43,7 @@ def cmd_verify(args) -> int:
     log.banner("FaceChain — Verify record against the ledger",
                Path(args.record).name)
     checks = pipeline.verify_record(record, tamper_field=args.tamper)
-    pipeline._print_verification(checks)
+    pipeline._print_verification(checks, tamper_mode=bool(args.tamper))
     if args.json:
         print(json.dumps(checks, indent=2))
     if args.tamper:
