@@ -21,6 +21,13 @@ import numpy as np
 from .. import config
 from . import models
 
+# OpenCV 4.13's new DNN graph engine prints harmless "Targets are not supported"
+# warnings when the models load. Quiet them so the pipeline output stays clean.
+try:
+    cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_ERROR)
+except Exception:
+    pass
+
 
 class NoFaceFound(Exception):
     """Raised when no face can be detected in an image."""
