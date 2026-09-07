@@ -179,7 +179,8 @@ def verify_record(record: dict, *, live_registry: Optional[FaceRegistry] = None,
         k = key or section
         orig = target.get(k)
         target[k] = (str(orig) + "_TAMPERED") if orig is not None else "TAMPERED"
-        log.warn(f"tampering with '{tamper_field}': {orig!r} -> {target[k]!r}")
+        log.info(log.dim(f"simulating an attacker editing the '{tamper_field}' "
+                         f"field of the saved record …"))
 
     recomputed = compute_fingerprint(payload)
     stored = record["fingerprint"]
@@ -229,13 +230,30 @@ def _print_verification(checks: dict, tamper_mode: bool = False) -> None:
     reachable = checks.get("chain_reachable")
     network = checks.get("network")
 
+    # --- Tamper demo: an intentional mismatch is a SUCCESS. Show it all-green,
+    #     with no red "FAIL" or scary warnings on screen. ------------------------
+    if tamper_mode:
+        log.kv("original fingerprint (anchored)", checks["stored_fingerprint"])
+        log.kv("fingerprint after the edit", checks["recomputed_fingerprint"])
+        if not off:
+            log.ok("the edit changed the fingerprint — the change is detected")
+            log.ok("an altered record can never match the on-chain anchor")
+        else:
+            log.warn("unexpected: the edit did not change the fingerprint")
+        print()
+        if not checks.get("verified"):
+            log.banner("🛡️  TAMPER-EVIDENCE CONFIRMED",
+                       "the altered record was correctly rejected by the ledger")
+        else:
+            log.banner("⚠️  TAMPER NOT DETECTED",
+                       "a modified record still verified — this should not happen")
+        return
+
     log.kv("off-chain integrity", mark(off))
     log.kv("  recomputed", checks["recomputed_fingerprint"])
     log.kv("  stored", checks["stored_fingerprint"])
     if not off:
-        # In tamper mode this mismatch is the *expected, successful* outcome.
-        (log.ok if tamper_mode else log.fail)(
-            "fingerprint mismatch — the edit to the record was detected")
+        log.fail("fingerprint mismatch — the edit to the record was detected")
 
     if reachable:
         log.kv("on-chain fingerprint exists", mark(checks.get("onchain_exists")))
@@ -250,16 +268,6 @@ def _print_verification(checks: dict, tamper_mode: bool = False) -> None:
         log.warn(f"chain not reachable for re-read: {checks.get('chain_error')}")
 
     print()
-    if tamper_mode:
-        # A tampered record that FAILS verification means the safeguard works.
-        if not checks.get("verified"):
-            log.banner("🛡️  TAMPER-EVIDENCE CONFIRMED",
-                       "the altered record was correctly rejected by the ledger")
-        else:
-            log.banner("⚠️  TAMPER NOT DETECTED",
-                       "a modified record still verified — this should not happen")
-        return
-
     if not off:
         log.banner("❌  VERIFICATION FAILED — RECORD ALTERED",
                    "record contents no longer match the anchored fingerprint")
